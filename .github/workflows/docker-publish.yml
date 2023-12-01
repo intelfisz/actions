@@ -4,6 +4,11 @@ name: Docker
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_PASSWORD:
+        required: true    
   push:
     branches: [ main ]
   pull_request:
