@@ -4,6 +4,16 @@ name: Docker
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        description: 'Docker Hub username to be provided by the caller workflow'
+        required: true
+      DOCKERHUB_TOKEN:
+        description: 'Docker Hub RW-token for publishing docker images'
+        required: true
+      DOCKERHUB_TOKEN_DELETE:
+        description: 'Docker Hub RWD-token to update image descriptions'
+        required: true
   push:
     branches: [ main ]
   pull_request:
@@ -13,8 +23,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
-
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,38 +84,3 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN_DELETE }}
           repository: ${{ github.repository }}
           short-description: ${{ github.event.repository.description }}
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3.0.0
-
-      - name: Install additional kernel modules needed for OPI like VRF
-        run: sudo apt-get install linux-modules-extra-$(uname -r)
-
-      - name: Load additional kernel modules needed for OPI like VRF
-        run: sudo modprobe -v vrf
-
-      - name: Start containers
-        run: docker-compose up --build --force-recreate --detach opi-test
-
-      - name: Run Tests
-        run: |
-          set -x
-          name=$(docker-compose ps | grep opi-test | awk '{print $1}')
-          rc=$(docker wait "${name}")
-          if [ "${rc}" != "0" ]; then
-              echo "opi-test failed:"
-              docker logs "${name}"
-              exit 1
-          fi
-
-      - name: Logs
-        if: always()
-        run: docker-compose logs
-
-      - name: Stop containers
-        if: always()
-        run: docker-compose down --volumes --remove-orphans
